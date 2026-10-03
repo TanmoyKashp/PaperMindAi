@@ -1,0 +1,46 @@
+Analyze the following academic research paper text and extract all key research components.
+
+You must return a valid JSON object matching this exact schema:
+{
+  "title": "Title of the research paper (or 'Untitled Paper' if undetectable)",
+  "problem_statement": "The core problem, challenge, or research gap the paper addresses.",
+  "research_objectives": [
+    "Primary goal or objective 1",
+    "Objective 2 (if applicable)"
+  ],
+  "methodology": "Detailed description of the proposed framework, architecture, experimental setup, or theoretical workflow.",
+  "algorithms_models": [
+    "Specific algorithm, neural architecture, or mathematical model used (e.g., Transformer, ResNet-50, AdamW)"
+  ],
+  "datasets": "Specific datasets used for evaluation, benchmarking, or training. If none are specified, write 'Not explicitly stated in the paper.'",
+  "key_findings": [
+    "Key quantitative and qualitative experimental finding 1",
+    "Key finding 2"
+  ],
+  "limitations": [
+    "Limitation or constraint acknowledged by the authors (or 'Not explicitly stated in the paper.')"
+  ],
+  "future_scope": [
+    "Future research direction proposed by the authors (or 'Not explicitly stated in the paper.')"
+  ],
+  "keywords": [
+    "Up to 10 specific, non-generic domain keywords"
+  ],
+  "summary": {
+    "overview": "High-level overview of the entire paper (2-3 sentences).",
+    "contributions": [
+      "Key scientific or technical contribution 1",
+      "Contribution 2"
+    ],
+    "conclusion": "Final concluding takeaway from the authors."
+  }
+}
+
+CRITICAL RULES:
+- Output MUST be valid JSON only. Do not include markdown code block formatting like ```json ... ``` outside of the JSON string.
+- If any component is not explicitly mentioned in the text, return "Not explicitly stated in the paper." for strings, or ["Not explicitly stated in the paper."] for lists.
+- For keywords, select domain-specific technical terms. Avoid generic filler words such as 'paper', 'research', 'study', 'results', 'method'.
+- Ensure all factual statements are directly derived from the document text below.
+
+DOCUMENT TEXT:
+{document_text}

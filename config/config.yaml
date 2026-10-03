@@ -1,0 +1,23 @@
+# PaperMind AI Configuration
+
+app:
+  name: "PaperMind AI"
+  version: "1.0.0"
+  description: "NLP-Based Research Paper Intelligence Assistant"
+  max_file_size_mb: 20
+
+model:
+  name: "gemini-2.5-flash"
+  temperature: 0.2
+  max_output_tokens: 4096
+  top_p: 0.95
+
+nlp:
+  max_keywords: 10
+  min_extracted_text_chars: 100
+  chunk_size_tokens: 3000
+  chunk_overlap_tokens: 200
+
+qa:
+  max_history_turns: 10
+  context_window_chars: 12000
