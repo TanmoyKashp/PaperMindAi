@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function DocumentHeader({
   filename,
@@ -17,7 +17,7 @@ export default function DocumentHeader({
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
         <span className="eyebrow">Academic Document</span>
         <span style={{ color: 'var(--text-tertiary)' }}>•</span>
-        <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{filename}</span>
+        <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>{filename}</span>
       </div>
 
       <div
@@ -32,21 +32,23 @@ export default function DocumentHeader({
         <h1
           className="font-serif"
           style={{
-            fontSize: '2.1rem',
+            fontSize: '2.15rem',
             fontWeight: 400,
             color: 'var(--text-main)',
             lineHeight: 1.25,
             letterSpacing: '-0.015em',
-            maxWidth: '750px',
+            maxWidth: '780px',
+            margin: 0,
           }}
         >
           {displayTitle}
         </h1>
 
-        {/* Action Button */}
-        <div>
+        {/* Action Trigger */}
+        <div style={{ flexShrink: 0 }}>
           {!analysis ? (
             <button
+              type="button"
               onClick={isApiConfigured ? onAnalyze : onOpenSettings}
               disabled={isAnalyzing}
               className="btn-primary"
@@ -78,13 +80,13 @@ export default function DocumentHeader({
                 backgroundColor: 'var(--success-bg)',
                 color: 'var(--success-text)',
                 border: '1px solid var(--success-border)',
-                padding: '0.45rem 0.95rem',
+                padding: '0.5rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                fontSize: '0.85rem',
+                fontSize: '0.86rem',
                 fontWeight: 600,
               }}
             >
-              <CheckCircle size={15} />
+              <CheckCircle2 size={15} />
               <span>Analysis Synthesized</span>
             </div>
           )}
@@ -92,7 +94,7 @@ export default function DocumentHeader({
       </div>
 
       {analysisError && (
-        <div className="alert-error" style={{ marginTop: '1rem' }}>
+        <div className="alert-error" style={{ marginTop: '1.25rem' }}>
           <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
             <strong>Analysis Error:</strong> {analysisError}

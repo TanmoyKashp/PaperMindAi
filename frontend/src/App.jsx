@@ -1,14 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import AppHeader from './components/AppHeader';
-import UploadZone from './components/UploadZone';
-import DocumentHeader from './components/DocumentHeader';
-import MetricsRow from './components/MetricsRow';
-import OverviewTab from './components/OverviewTab';
-import AnalysisTab from './components/AnalysisTab';
-import KeywordsTab from './components/KeywordsTab';
-import ChatTab from './components/ChatTab';
-import ReportTab from './components/ReportTab';
-import ApiKeyModal from './components/ApiKeyModal';
+import AppHeader from './components/layout/AppHeader';
+import UploadZone from './components/upload/UploadZone';
+import DocumentHeader from './components/analysis/DocumentHeader';
+import MetricsRow from './components/analysis/MetricsRow';
+import OverviewTab from './components/analysis/OverviewTab';
+import AnalysisTab from './components/analysis/AnalysisTab';
+import KeywordsTab from './components/analysis/KeywordsTab';
+import ChatTab from './components/chat/ChatTab';
+import ReportTab from './components/report/ReportTab';
+import ApiKeyModal from './components/common/ApiKeyModal';
+
+import {
+  fetchSystemConfig,
+  uploadPdfDocument,
+  analyzeResearchPaper,
+  sendChatMessage,
+  clearChatHistory,
+  resetWorkspaceSession,
+  updateApiKey,
+} from './services/api';
 
 export default function App() {
   const [systemConfig, setSystemConfig] = useState({
@@ -24,21 +34,22 @@ export default function App() {
   const [isSendingChat, setIsSendingChat] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Fetch initial system configuration
-  const fetchConfig = async () => {
-    try {
-      const res = await fetch('/api/config');
-      if (res.ok) {
-        const data = await res.json();
-        setSystemConfig(data);
-      }
-    } catch (err) {
-      console.error('Failed to load system config:', err);
-    }
-  };
-
+  // Load system configuration
   useEffect(() => {
-    fetchConfig();
+    let isMounted = true;
+    fetchSystemConfig()
+      .then((data) => {
+        if (isMounted && data) {
+          setSystemConfig(data);
+        }
+      })
+      .catch((err) => {
+        console.warn('System config load notice:', err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Handle PDF upload
@@ -46,22 +57,8 @@ export default function App() {
     setIsUploading(true);
     setUploadError(null);
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errMsg = data.detail?.message || data.detail || 'Upload failed.';
-        throw new Error(errMsg);
-      }
-
+      const data = await uploadPdfDocument(file);
       setDocData({
         doc_id: data.doc_id,
         filename: data.filename,
@@ -73,13 +70,13 @@ export default function App() {
       });
       setActiveTab('overview');
     } catch (err) {
-      setUploadError(err.message || 'Error processing PDF document.');
+      setUploadError(err.message || 'Error parsing PDF document.');
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Handle AI Analysis
+  // Trigger Gemini analysis
   const handleTriggerAnalysis = async () => {
     if (!docData?.doc_id) return;
 
@@ -87,19 +84,7 @@ export default function App() {
     setAnalysisError(null);
 
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doc_id: docData.doc_id }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errMsg = data.detail || 'Analysis failed.';
-        throw new Error(errMsg);
-      }
-
+      const data = await analyzeResearchPaper(docData.doc_id);
       setDocData((prev) => ({
         ...prev,
         analysis: data.analysis,
@@ -111,29 +96,18 @@ export default function App() {
     }
   };
 
-  // Handle Q&A Message
+  // Send message in grounded Q&A
   const handleSendMessage = async (question) => {
     if (!docData?.doc_id || !question.trim()) return;
 
-    // Optimistically update conversation
-    const updatedHistory = [...(docData.chat_history || []), { role: 'user', content: question }];
-    setDocData((prev) => ({ ...prev, chat_history: updatedHistory }));
+    const previousHistory = docData.chat_history || [];
+    const optimisticHistory = [...previousHistory, { role: 'user', content: question }];
+    
+    setDocData((prev) => ({ ...prev, chat_history: optimisticHistory }));
     setIsSendingChat(true);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doc_id: docData.doc_id, question }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errMsg = data.detail || 'Failed to generate answer.';
-        throw new Error(errMsg);
-      }
-
+      const data = await sendChatMessage(docData.doc_id, question);
       setDocData((prev) => ({
         ...prev,
         chat_history: data.chat_history,
@@ -142,8 +116,11 @@ export default function App() {
       setDocData((prev) => ({
         ...prev,
         chat_history: [
-          ...updatedHistory,
-          { role: 'assistant', content: `⚠️ Error: ${err.message || 'Failed to get answer.'}` },
+          ...optimisticHistory,
+          {
+            role: 'assistant',
+            content: `**Error:** ${err.message || 'Failed to generate answer. Please verify your Gemini API key or connection.'}`,
+          },
         ],
       }));
     } finally {
@@ -151,27 +128,23 @@ export default function App() {
     }
   };
 
-  // Clear Chat
+  // Clear Chat History
   const handleClearChat = async () => {
     if (!docData?.doc_id) return;
     try {
-      await fetch('/api/chat/clear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doc_id: docData.doc_id }),
-      });
+      await clearChatHistory(docData.doc_id);
       setDocData((prev) => ({ ...prev, chat_history: [] }));
     } catch (err) {
       console.error('Failed to clear chat:', err);
     }
   };
 
-  // Reset Document (Return to Welcome/Upload Screen)
+  // Reset Document / Upload New Paper
   const handleResetDoc = async () => {
     try {
-      await fetch('/api/reset', { method: 'POST' });
+      await resetWorkspaceSession();
     } catch (err) {
-      console.error('Failed to reset:', err);
+      console.warn('Session reset notice:', err);
     }
     setDocData(null);
     setUploadError(null);
@@ -179,21 +152,16 @@ export default function App() {
     setActiveTab('overview');
   };
 
-  // Update API Key from Modal
+  // Save & Verify API Key
   const handleSaveApiKey = async (newKey) => {
     try {
-      const response = await fetch('/api/config/api-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: newKey }),
-      });
-      const data = await response.json();
+      const data = await updateApiKey(newKey);
       if (data.is_configured) {
         setSystemConfig((prev) => ({ ...prev, is_api_configured: true }));
       }
       return data;
     } catch (err) {
-      return { success: false, message: err.message || 'Failed to save key.' };
+      return { success: false, message: err.message || 'Failed to update API key.' };
     }
   };
 
@@ -209,17 +177,17 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
-      {/* Main Content Area */}
+      {/* Main Workspace Body */}
       <main className="main-content">
         {!docData ? (
-          /* Welcome & Upload Screen */
+          /* Welcome Hero & Upload */
           <UploadZone
             onFileUpload={handleFileUpload}
             isUploading={isUploading}
             uploadError={uploadError}
           />
         ) : (
-          /* Document Workspace */
+          /* Document Intelligence Workspace */
           <div>
             <DocumentHeader
               filename={docData.filename}
@@ -237,14 +205,13 @@ export default function App() {
               totalWords={docData.total_words}
             />
 
-            {/* Active Workspace View */}
+            {/* Active Feature Tab View */}
             <div style={{ marginTop: '2rem' }}>
               {activeTab === 'overview' && (
                 <OverviewTab
                   analysis={docData.analysis}
                   onTriggerAnalysis={handleTriggerAnalysis}
                   isAnalyzing={isAnalyzing}
-                  isApiConfigured={systemConfig.is_api_configured}
                   setActiveTab={setActiveTab}
                 />
               )}
@@ -290,7 +257,7 @@ export default function App() {
         )}
       </main>
 
-      {/* API Key Modal */}
+      {/* Settings Modal */}
       <ApiKeyModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
