@@ -1,25 +1,46 @@
 import React from 'react';
-import { BookOpen, Target, Flag, Award, ArrowRight, Sparkles } from 'lucide-react';
+import { BookOpen, Target, Flag, Award, ArrowRight, Sparkles, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
 
-export default function OverviewTab({ analysis, onTriggerAnalysis, isAnalyzing, setActiveTab }) {
+export default function OverviewTab({ analysis, onTriggerAnalysis, isAnalyzing, setActiveTab, analysisError }) {
   if (!analysis) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '3.5rem 2rem' }}>
-        <Sparkles size={36} style={{ color: 'var(--accent-primary)', margin: '0 auto 1rem auto' }} />
+        {analysisError ? (
+          <AlertCircle size={36} style={{ color: '#c53030', margin: '0 auto 1rem auto' }} />
+        ) : (
+          <Sparkles size={36} style={{ color: 'var(--accent-primary)', margin: '0 auto 1rem auto' }} />
+        )}
         <h3 className="font-serif" style={{ fontSize: '1.65rem', marginBottom: '0.65rem', fontWeight: 500 }}>
-          Research Summary Ready to Generate
+          {analysisError ? 'Analysis Incomplete' : 'Research Summary Ready to Generate'}
         </h3>
-        <p style={{ color: 'var(--text-secondary)', maxWidth: '520px', margin: '0 auto 1.75rem auto' }}>
-          Trigger Gemini analysis to extract the core problem statement, research objectives, contributions, and findings.
+        <p style={{ color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto 1.75rem auto', lineHeight: 1.6 }}>
+          {analysisError
+            ? analysisError
+            : 'Trigger Gemini analysis to extract the core problem statement, research objectives, contributions, and findings.'}
         </p>
         <button
           type="button"
           onClick={onTriggerAnalysis}
           disabled={isAnalyzing}
           className="btn-primary"
-          style={{ margin: '0 auto' }}
+          style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          {isAnalyzing ? 'Extracting Insights...' : 'Generate Research Overview'}
+          {isAnalyzing ? (
+            <>
+              <Loader2 size={16} className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
+              <span>Synthesizing Components...</span>
+            </>
+          ) : analysisError ? (
+            <>
+              <RotateCcw size={16} />
+              <span>Retry Research Analysis</span>
+            </>
+          ) : (
+            <>
+              <Sparkles size={16} />
+              <span>Generate Research Overview</span>
+            </>
+          )}
         </button>
       </div>
     );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
 
 export default function DocumentHeader({
   filename,
@@ -61,8 +61,8 @@ export default function DocumentHeader({
                 </>
               ) : isApiConfigured ? (
                 <>
-                  <Sparkles size={16} />
-                  <span>Analyze Research Paper</span>
+                  {analysisError ? <RotateCcw size={16} /> : <Sparkles size={16} />}
+                  <span>{analysisError ? 'Retry Analysis' : 'Analyze Research Paper'}</span>
                 </>
               ) : (
                 <>
@@ -94,11 +94,43 @@ export default function DocumentHeader({
       </div>
 
       {analysisError && (
-        <div className="alert-error" style={{ marginTop: '1.25rem' }}>
-          <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-          <div>
-            <strong>Analysis Error:</strong> {analysisError}
+        <div
+          className="alert-error"
+          style={{
+            marginTop: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', flex: 1, minWidth: '240px' }}>
+            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <strong>Analysis Notice:</strong> {analysisError}
+            </div>
           </div>
+          {isApiConfigured && (
+            <button
+              type="button"
+              onClick={onAnalyze}
+              disabled={isAnalyzing}
+              className="btn-secondary"
+              style={{
+                fontSize: '0.84rem',
+                padding: '0.45rem 0.95rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                flexShrink: 0,
+                backgroundColor: '#ffffff',
+              }}
+            >
+              <RotateCcw size={14} />
+              <span>Retry Analysis</span>
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -78,7 +78,7 @@ export default function App() {
 
   // Trigger Gemini analysis
   const handleTriggerAnalysis = async () => {
-    if (!docData?.doc_id) return;
+    if (!docData?.doc_id || isAnalyzing) return;
 
     setIsAnalyzing(true);
     setAnalysisError(null);
@@ -213,6 +213,7 @@ export default function App() {
                   onTriggerAnalysis={handleTriggerAnalysis}
                   isAnalyzing={isAnalyzing}
                   setActiveTab={setActiveTab}
+                  analysisError={analysisError}
                 />
               )}
 

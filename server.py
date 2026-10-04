@@ -10,6 +10,7 @@ Exposes RESTful endpoints connecting the React frontend to the core NLP modules:
 
 import os
 import uuid
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, File, HTTPException, UploadFile, Query
@@ -25,7 +26,15 @@ from modules.gemini_client import (
     GeminiAPIError,
     GeminiAPIKeyError,
     GeminiQuotaError,
+    GeminiUnavailableError,
+    GeminiTransientError,
+    MSG_UNAVAILABLE,
+    MSG_QUOTA_EXCEEDED,
+    MSG_AUTH_FAILED,
+    MSG_TIMEOUT,
 )
+
+logger = logging.getLogger(__name__)
 from modules.paper_analyzer import PaperAnalyzer, PaperAnalysisResult
 from modules.qa_engine import QAEngine
 from modules.report_generator import ReportGenerator
@@ -198,11 +207,18 @@ def get_document(doc_id: str):
 
 @app.post("/api/analyze")
 def analyze_document(req: AnalyzeRequest):
-    """Perform structured academic paper analysis via Gemini API."""
+    """Perform structured academic paper analysis via Gemini API with duplicate-request protection."""
     if req.doc_id not in DOCUMENTS:
         raise HTTPException(status_code=404, detail="Document not found.")
 
     doc = DOCUMENTS[req.doc_id]
+
+    # Prevent concurrent duplicate analysis for the same document
+    if doc.get("is_analyzing", False):
+        raise HTTPException(
+            status_code=409,
+            detail="Analysis is already in progress for this document. Please wait for completion.",
+        )
 
     if not gemini_client.is_configured():
         raise HTTPException(
@@ -210,16 +226,34 @@ def analyze_document(req: AnalyzeRequest):
             detail="Gemini API key is not configured. Please add it to .env or settings.",
         )
 
+    doc["is_analyzing"] = True
     try:
         analysis: PaperAnalysisResult = analyzer.analyze_paper(doc["full_text"])
         doc["analysis"] = analysis
         return {"success": True, "analysis": analysis.model_dump()}
-    except GeminiAPIKeyError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    except GeminiUnavailableError as e:
+        logger.warning("503 Service Unavailable during paper analysis: %s", e)
+        raise HTTPException(status_code=503, detail=MSG_UNAVAILABLE)
     except GeminiQuotaError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        logger.warning("429 Rate Limit during paper analysis: %s", e)
+        raise HTTPException(status_code=429, detail=MSG_QUOTA_EXCEEDED)
+    except GeminiAPIKeyError as e:
+        logger.warning("401 Authentication failure during paper analysis: %s", e)
+        raise HTTPException(status_code=401, detail=MSG_AUTH_FAILED)
+    except GeminiTransientError as e:
+        logger.warning("Transient timeout during paper analysis: %s", e)
+        raise HTTPException(status_code=503, detail=MSG_TIMEOUT)
+    except ValueError as e:
+        logger.warning("Invalid output schema during paper analysis: %s", e)
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        logger.exception("Unexpected error during paper analysis")
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred during paper analysis. Your document is still available. Please retry in a moment.",
+        )
+    finally:
+        doc["is_analyzing"] = False
 
 
 @app.post("/api/chat")
@@ -240,11 +274,11 @@ def chat_with_document(req: ChatRequest):
     if not question:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
-    try:
-        # User message
-        doc["chat_history"].append({"role": "user", "content": question})
+    # Tentative user entry
+    user_entry = {"role": "user", "content": question}
+    doc["chat_history"].append(user_entry)
 
-        # Answer question
+    try:
         answer = qa_engine.answer_question(
             question=question,
             full_document_text=doc["full_text"],
@@ -258,12 +292,32 @@ def chat_with_document(req: ChatRequest):
             "answer": answer,
             "chat_history": doc["chat_history"],
         }
-    except GeminiAPIKeyError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    except GeminiUnavailableError as e:
+        doc["chat_history"].pop()
+        logger.warning("503 Service Unavailable during Q&A: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail="The AI model is temporarily experiencing high demand. Please retry your question in a moment.",
+        )
     except GeminiQuotaError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        doc["chat_history"].pop()
+        logger.warning("429 Rate Limit during Q&A: %s", e)
+        raise HTTPException(status_code=429, detail=MSG_QUOTA_EXCEEDED)
+    except GeminiAPIKeyError as e:
+        doc["chat_history"].pop()
+        logger.warning("401 Authentication failure during Q&A: %s", e)
+        raise HTTPException(status_code=401, detail=MSG_AUTH_FAILED)
+    except GeminiTransientError as e:
+        doc["chat_history"].pop()
+        logger.warning("Transient timeout during Q&A: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail="Connection to the AI service timed out. Please retry your question in a moment.",
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Q&A failed: {str(e)}")
+        doc["chat_history"].pop()
+        logger.exception("Unexpected error during Q&A")
+        raise HTTPException(status_code=500, detail="Failed to generate answer. Please retry in a moment.")
 
 
 @app.post("/api/chat/clear")
