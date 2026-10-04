@@ -36,7 +36,10 @@ class GeminiClient:
         config_path: Optional[str] = None,
     ):
         self.config = load_config(config_path)
-        self.api_key = api_key or get_api_key()
+        if api_key is not None:
+            self.api_key = api_key.strip() if api_key else None
+        else:
+            self.api_key = get_api_key()
         
         # Priority: explicit argument -> config.yaml -> fallback
         configured_model = self.config.get("model", {}).get("name", "gemini-2.5-flash")

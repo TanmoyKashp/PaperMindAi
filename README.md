@@ -2,7 +2,9 @@
 
 **Academic Level:** Final Year B.Tech in Computer Science and Engineering  
 **Primary Domain:** Natural Language Processing (NLP) & Applied Large Language Models (LLMs)  
-**Frameworks:** Streamlit, Google Gen AI SDK (`google-genai`), PyMuPDF (`fitz`), NLTK  
+**Frontend Design:** React 19 + Vite, Lucide Icons, DM Serif Display & Inter typography  
+**Design Reference:** Pyramid Labs editorial minimalism (Warm Ivory `#F7F5F2`, Deep Terracotta `#873416`)  
+**Backend & NLP:** FastAPI, Uvicorn, Google Gen AI SDK (`google-genai`), PyMuPDF (`pymupdf`), NLTK  
 
 ---
 
@@ -10,7 +12,9 @@
 
 **PaperMind AI** is an intelligent academic research assistant designed to accelerate literature review and scientific document comprehension. In academic research, students and scholars often spend countless hours parsing dense, multi-page PDF documents to extract core methodologies, datasets, experimental baselines, and architectural limitations.
 
-PaperMind AI bridges this gap by marrying classical **Natural Language Processing (NLP)** preprocessing techniques with state-of-the-art **Google Gemini 2.5 Flash** generative models. The application extracts digital text from complex two-column academic layouts, performs linguistic tokenization and statistical analysis, structures research components into verifiable insights without hallucinations, and facilitates document-grounded, contextual question answering.
+PaperMind AI bridges this gap by marrying classical **Natural Language Processing (NLP)** preprocessing techniques with state-of-the-art **Google Gemini** generative models. The application extracts digital text from complex two-column academic layouts, performs linguistic tokenization and statistical analysis, structures research components into verifiable insights without hallucinations, and facilitates document-grounded, contextual question answering.
+
+The application features a **Pyramid Labs-inspired editorial frontend** designed for distraction-free academic focus with warm ivory surfaces, deep terracotta accents, and publication-grade typography.
 
 ---
 
@@ -32,6 +36,7 @@ Modern scientific literature is proliferating exponentially across arXiv, IEEE X
 4. **Domain Keyword Extraction:** Isolate up to 10 context-specific technical keywords while filtering out generic academic noise words (e.g., "paper", "study", "method").
 5. **Document-Grounded Q&A (Vector-DB-Free):** Enable conversational interaction where answers are strictly derived from document context, explicitly returning *"Not explicitly stated in the paper"* when evidence is absent.
 6. **Academic Report Export:** Generate a comprehensive, publication-ready Markdown research report summarizing all findings for thesis documentation.
+7. **Editorial SaaS Experience:** Deliver an editorial, calm, and distraction-free user interface inspired by Pyramid Labs.
 
 ---
 
@@ -51,13 +56,17 @@ Modern scientific literature is proliferating exponentially across arXiv, IEEE X
 
 ## 5. Technology Stack
 
+- **Frontend:** React 19, Vite, Lucide Icons, Custom CSS Design Tokens
+- **Typography:** DM Serif Display (headings), Inter (body / controls)
+- **Backend API:** FastAPI, Uvicorn (ASGI)
 - **Programming Language:** Python 3.12+
-- **Frontend / Web UI:** Streamlit (`>= 1.35.0`)
 - **LLM Engine:** Google Gemini API (`gemini-2.5-flash` / `gemini-1.5-flash`)
 - **LLM SDK:** Official Google Gen AI SDK (`google-genai`)
 - **PDF Extraction:** PyMuPDF (`fitz` `>= 1.24.0`)
 - **NLP & Linguistics:** NLTK (`nltk` `>= 3.8.1`), Regular Expressions
 - **Data Validation:** Pydantic v2 (`pydantic` `>= 2.7.0`)
+- **Configuration Management:** PyYAML, `python-dotenv`
+- **Unit Testing:** PyTest (`pytest` `>= 8.2.0`)
 - **Configuration Management:** PyYAML, `python-dotenv`
 - **Unit Testing:** PyTest (`pytest` `>= 8.2.0`)
 
@@ -196,15 +205,36 @@ pip install -r requirements.txt
 
 ## 11. Running the Application
 
-Launch the Streamlit web application:
+### Option A: Premium React Frontend + FastAPI Backend (Recommended)
+
+1. **Start the Unified Backend & React Server:**
+   ```bash
+   # From project root with .venv activated:
+   python server.py
+   ```
+   This serves both the FastAPI REST endpoints and the compiled React application directly at:
+   ```
+   http://localhost:8000
+   ```
+
+2. **Frontend Development Mode (Vite Hot-Reload):**
+   If you want to modify React components with instant hot module replacement:
+   ```bash
+   # Terminal 1: Start backend API
+   python server.py
+
+   # Terminal 2: Start Vite dev server
+   cd frontend
+   npm run dev
+   ```
+   Access the Vite development environment at: `http://localhost:5173`.
+
+### Option B: Streamlit Interface (Classic)
+The original Streamlit application remains fully preserved and functional:
 ```bash
 streamlit run app.py
 ```
-
-The application will start and automatically open in your default browser at:
-```
-http://localhost:8501
-```
+Access Streamlit at: `http://localhost:8501`.
 
 ---
 

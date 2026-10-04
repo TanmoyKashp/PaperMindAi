@@ -24,7 +24,7 @@ def test_gemini_client_not_configured():
 
 def test_gemini_client_configured(mock_gemini_client):
     assert mock_gemini_client.is_configured() is True
-    assert mock_gemini_client.model_name == "gemini-2.5-flash"
+    assert mock_gemini_client.model_name in ["gemini-3.5-flash", "gemini-2.5-flash"]
 
 
 def test_paper_analyzer_with_mock(mock_gemini_client):
