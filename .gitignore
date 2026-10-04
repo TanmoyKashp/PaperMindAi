@@ -13,6 +13,8 @@ __pycache__/
 
 # Environment variables & secrets
 .env
+.env.*
+!.env.example
 *.env.local
 
 # OS files
